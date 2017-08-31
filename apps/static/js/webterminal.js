@@ -13,7 +13,11 @@ WSSHClient.prototype._generateEndpoint = function (options) {
         var protocol = 'ws://';
     }
 
+<<<<<<< HEAD:apps/static/js/webterminal.js
     var endpoint = protocol + document.URL.match(RegExp('//(.*?)/'))[1] + '/ws/applications' + document.URL.match(/(\?.*)/);
+=======
+    var endpoint = protocol + document.URL.match(RegExp('//(.*?)/'))[1] + '/ws/terminal' + document.URL.match(/\?.*/);
+>>>>>>> a114e173e07837831c78669bbd1546e430e4b7fc:static/js/webterminal.js
     return endpoint;
 };
 WSSHClient.prototype.connect = function (options) {
