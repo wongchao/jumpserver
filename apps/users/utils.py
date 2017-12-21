@@ -8,7 +8,7 @@ import uuid
 from paramiko.rsakey import RSAKey
 from django.conf import settings
 from django.contrib.auth.mixins import UserPassesTestMixin
-from django.urls import reverse_lazy
+from django.contrib.auth import authenticate
 from django.utils.translation import ugettext as _
 from django.core.cache import cache
 
@@ -140,7 +140,7 @@ def check_user_valid(**kwargs):
     elif not user.is_valid:
         return None, _('Disabled or expired')
 
-    if password and user.password and user.check_password(password):
+    if password and authenticate(username=username, password=password):
         return user, ''
 
     if public_key and user.public_key:
@@ -160,7 +160,8 @@ def refresh_token(token, user, expiration=settings.CONFIG.TOKEN_EXPIRATION or 36
 
 def generate_token(request, user):
     expiration = settings.CONFIG.TOKEN_EXPIRATION or 3600
-    remote_addr = request.META.get('REMOTE_ADDR', '')
+    remote_addr = request.META.get("X_HTTP_REAL_IP") or \
+            request.META.get('REMOTE_ADDR', '')
     if not isinstance(remote_addr, bytes):
         remote_addr = remote_addr.encode("utf-8")
     remote_addr = base64.b16encode(remote_addr) #.replace(b'=', '')
