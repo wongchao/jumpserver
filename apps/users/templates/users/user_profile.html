@@ -17,7 +17,7 @@
                                 <a href="" class="text-center"><i class="fa fa-laptop"></i> {% trans 'Profile' %} </a>
                             </li>
                             <li class="pull-right">
-                                <a class="btn btn-outline btn-default" href="{% url 'users:user-profile-update' %}"><i class="fa fa-edit"></i>{% trans 'Settings' %}</a>
+                                <a class="btn btn-outline btn-default" href="{% url 'users:user-profile-update' %}"><i class="fa fa-edit"></i>{% trans 'Setting' %}</a>
                             </li>
                         </ul>
                     </div>
@@ -111,10 +111,6 @@
                                                 </td>
                                             </tr>
                                             <tr>
-                                                <td class="text-navy">{% trans 'Perm assets' %}</td>
-                                                <td>{{ assets | length }}</td>
-                                            </tr>
-                                            <tr>
                                                 <td class="text-navy">{% trans 'Comment' %}:</td>
                                                 <td><b>{{ user.comment }}</b></td>
                                             </tr>
@@ -168,12 +164,12 @@ $(document).on('click', '#btn_update_pk', function() {
     var success = function() {
         $('#txt_pk').val('');
         var msg = "{% trans 'Successfully updated the SSH public key.' %}";
-        swal("{% trans 'User SSH Public Key Update' %}", msg, "success");
+        swal("{% trans 'User SSH public key update' %}", msg, "success");
     };
     var fail = function() {
         var msg = "{% trans 'Failed to update SSH public key.' %}";
         swal({
-            title: "{% trans 'User SSH Public Key Update' %}",
+            title: "{% trans 'User SSH public key update' %}",
             text: msg,
             type: "error",
             showCancelButton: false,

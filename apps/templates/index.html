@@ -11,7 +11,7 @@
                 </div>
                 <div class="ibox-content">
                     <h1 class="no-margins"><a href="{% url 'users:user-list' %}">{{ users_count }}</a></h1>
-                    <small>All user</small>
+                    <small>All users</small>
                 </div>
             </div>
         </div>
@@ -23,7 +23,7 @@
                 </div>
                 <div class="ibox-content">
                     <h1 class="no-margins"><a href="{% url 'assets:asset-list' %}">{{ assets_count }}</a></h1>
-                    <small>All host</small>
+                    <small>All hosts</small>
                 </div>
             </div>
         </div>
@@ -35,8 +35,8 @@
                     <h5>在线用户</h5>
                 </div>
                 <div class="ibox-content">
-                    <h1 class="no-margins"><a href="{% url 'audits:proxy-log-online-list' %}"> <span id="online_users"></span>{{ online_user_count }}</a></h1>
-                    <small>Online user</small>
+                    <h1 class="no-margins"><a href="{% url 'terminal:session-online-list' %}"> <span id="online_users"></span>{{ online_user_count }}</a></h1>
+                    <small>Online users</small>
                 </div>
             </div>
         </div>
@@ -45,11 +45,11 @@
             <div class="ibox float-e-margins">
                 <div class="ibox-title">
                     <span class="label label-danger pull-right">Connected</span>
-                    <h5>已连接服务器</h5>
+                    <h5>在线会话</h5>
                 </div>
                 <div class="ibox-content">
-                        <h1 class="no-margins"><a href="{% url 'audits:proxy-log-online-list' %}"> <span id="online_hosts"></span>{{ online_asset_count }}</a></h1>
-                    <small>Connected host</small>
+                        <h1 class="no-margins"><a href="{% url 'terminal:session-online-list' %}"> <span id="online_hosts"></span>{{ online_asset_count }}</a></h1>
+                    <small>Online sessions</small>
                 </div>
             </div>
         </div>
@@ -164,7 +164,7 @@
                                 {% for login in last_login_ten %}
                                     <div class="feed-element">
                                         <a href="#" class="pull-left">
-                                            <img alt="image" class="img-circle" src="/static/img/root.png">
+                                            <img alt="image" class="img-circle" src="{% static 'img/avatar/user.png' %}">
                                         </a>
                                         <div class="media-body ">
                                             {% ifequal login.is_finished 0 %}

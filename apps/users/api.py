@@ -1,17 +1,21 @@
 # ~*~ coding: utf-8 ~*~
+import uuid
+
+from django.core.cache import cache
 
 from rest_framework import generics
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework import viewsets
 from rest_framework_bulk import BulkModelViewSet
-from django_filters.rest_framework import DjangoFilterBackend
 
-from . import serializers
-from .hands import write_login_log_async
+from .serializers import UserSerializer, UserGroupSerializer, \
+    UserGroupUpdateMemeberSerializer, UserPKUpdateSerializer, \
+    UserUpdateGroupSerializer, ChangeUserPasswordSerializer
+from .tasks import write_login_log_async
 from .models import User, UserGroup
-from .permissions import IsSuperUser, IsValidUser, IsCurrentUserOrReadOnly
+from .permissions import IsSuperUser, IsValidUser, IsCurrentUserOrReadOnly, \
+    IsSuperUserOrAppUser
 from .utils import check_user_valid, generate_token
 from common.mixins import IDInFilterMixin
 from common.utils import get_logger
@@ -20,49 +24,35 @@ from common.utils import get_logger
 logger = get_logger(__name__)
 
 
-# class UserListView(generics.ListAPIView):
-#     queryset = User.objects.all()
-#     serializer_class = serializers.UserSerializer
-#     filter_fields = ('username', 'email', 'name', 'id')
-
-
-class UserViewSet(viewsets.ModelViewSet):
-    # class UserViewSet(IDInFilterMixin, BulkModelViewSet):
-    """
-    retrieve:
-        Return a user instance .
-
-    list:
-        Return all users except app user, ordered by most recently joined.
-
-    create:
-        Create a new user.
-
-    delete:
-        Remove an existing user.
-
-    partial_update:
-        Update one or more fields on an existing user.
-
-    update:
-        Update a user.
-    """
-    queryset = User.objects.all()
+class UserViewSet(IDInFilterMixin, BulkModelViewSet):
+    queryset = User.objects.exclude(role="App")
     # queryset = User.objects.all().exclude(role="App").order_by("date_joined")
-    serializer_class = serializers.UserSerializer
-    permission_classes = (IsSuperUser,)
+    serializer_class = UserSerializer
+    permission_classes = (IsSuperUser, IsAuthenticated)
     filter_fields = ('username', 'email', 'name', 'id')
+
+
+class ChangeUserPasswordApi(generics.RetrieveUpdateAPIView):
+    permission_classes = (IsSuperUser,)
+    queryset = User.objects.all()
+    serializer_class = ChangeUserPasswordSerializer
+
+    def perform_update(self, serializer):
+        user = self.get_object()
+        user.password_raw = serializer.validated_data["password"]
+        user.save()
 
 
 class UserUpdateGroupApi(generics.RetrieveUpdateAPIView):
     queryset = User.objects.all()
-    serializer_class = serializers.UserUpdateGroupSerializer
+    serializer_class = UserUpdateGroupSerializer
     permission_classes = (IsSuperUser,)
 
 
 class UserResetPasswordApi(generics.UpdateAPIView):
     queryset = User.objects.all()
-    serializer_class = serializers.UserSerializer
+    serializer_class = UserSerializer
+    permission_classes = (IsAuthenticated,)
 
     def perform_update(self, serializer):
         # Note: we are not updating the user object here.
@@ -77,7 +67,7 @@ class UserResetPasswordApi(generics.UpdateAPIView):
 
 class UserResetPKApi(generics.UpdateAPIView):
     queryset = User.objects.all()
-    serializer_class = serializers.UserSerializer
+    serializer_class = UserSerializer
 
     def perform_update(self, serializer):
         from .utils import send_reset_ssh_key_mail
@@ -89,7 +79,7 @@ class UserResetPKApi(generics.UpdateAPIView):
 
 class UserUpdatePKApi(generics.UpdateAPIView):
     queryset = User.objects.all()
-    serializer_class = serializers.UserPKUpdateSerializer
+    serializer_class = UserPKUpdateSerializer
     permission_classes = (IsCurrentUserOrReadOnly,)
 
     def perform_update(self, serializer):
@@ -100,12 +90,12 @@ class UserUpdatePKApi(generics.UpdateAPIView):
 
 class UserGroupViewSet(IDInFilterMixin, BulkModelViewSet):
     queryset = UserGroup.objects.all()
-    serializer_class = serializers.UserGroupSerializer
+    serializer_class = UserGroupSerializer
 
 
 class UserGroupUpdateUserApi(generics.RetrieveUpdateAPIView):
     queryset = UserGroup.objects.all()
-    serializer_class = serializers.UserGroupUpdateMemeberSerializer
+    serializer_class = UserGroupUpdateMemeberSerializer
     permission_classes = (IsSuperUser,)
 
 
@@ -153,16 +143,51 @@ class UserAuthApi(APIView):
         login_ip = request.data.get('remote_addr', None)
         user_agent = request.data.get('HTTP_USER_AGENT', '')
 
+        if not login_ip:
+            x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR', '').split(',')
+            if x_forwarded_for:
+                login_ip = x_forwarded_for[0]
+            else:
+                login_ip = request.META.get("REMOTE_ADDR")
+
         user, msg = check_user_valid(
             username=username, password=password,
-            public_key=public_key)
+            public_key=public_key
+        )
 
         if user:
             token = generate_token(request, user)
             write_login_log_async.delay(
-                user.username, name=user.name,
-                user_agent=user_agent, login_ip=login_ip,
-                login_type=login_type)
+                user.username, ip=login_ip,
+                type=login_type, user_agent=user_agent,
+            )
             return Response({'token': token, 'user': user.to_json()})
         else:
             return Response({'msg': msg}, status=401)
+
+
+class UserConnectionTokenApi(APIView):
+    permission_classes = (IsSuperUserOrAppUser,)
+
+    def post(self, request):
+        user_id = request.data.get('user', '')
+        asset_id = request.data.get('asset', '')
+        system_user_id = request.data.get('system_user', '')
+        token = str(uuid.uuid4())
+        value = {
+            'user': user_id,
+            'asset': asset_id,
+            'system_user': system_user_id
+        }
+        cache.set(token, value, timeout=3600)
+        return Response({"token": token}, status=201)
+
+    def get(self, request):
+        token = request.query_params.get('token')
+        value = cache.get(token, None)
+        if value:
+            cache.delete(token)
+        return Response(value)
+
+
+

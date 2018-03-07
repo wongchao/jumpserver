@@ -4,37 +4,27 @@ from __future__ import absolute_import, unicode_literals
 from django import forms
 from django.utils.translation import ugettext_lazy as _
 
-# from .hands import User, UserGroup, Asset, AssetGroup, SystemUser
-from .models import AssetPermission
+from .models import NodePermission
 
 
 class AssetPermissionForm(forms.ModelForm):
     class Meta:
-        model = AssetPermission
+        model = NodePermission
         fields = [
-            'name', 'users', 'user_groups', 'assets', 'asset_groups',
-            'system_users', 'is_active', 'date_expired', 'comment',
+            'node', 'user_group', 'system_user', 'is_active',
+            'date_expired', 'comment',
         ]
         widgets = {
-            'users': forms.SelectMultiple(
-                attrs={'class': 'select2',
-                       'data-placeholder': _('Select users')}),
-            'user_groups': forms.SelectMultiple(
-                attrs={'class': 'select2',
-                       'data-placeholder': _('Select user groups')}),
-            'assets': forms.SelectMultiple(
-                attrs={'class': 'select2',
-                       'data-placeholder': _('Select assets')}),
-            'asset_groups': forms.SelectMultiple(
-                attrs={'class': 'select2',
-                       'data-placeholder': _('Select asset groups')}),
-            'system_users': forms.SelectMultiple(
-                attrs={'class': 'select2',
-                       'data-placeholder': _('Select system users')}),
+            'node': forms.Select(
+                attrs={'style': 'display:none'}
+            ),
+            'user_group': forms.Select(
+                attrs={'class': 'select2', 'data-placeholder': _("User group")}
+            ),
+            'system_user': forms.Select(
+                attrs={'class': 'select2', 'data-placeholder': _('System user')}
+            ),
         }
-        help_texts = {
-            'name': '* required',
-            'user_groups': '* User or user group at least one required',
-            'asset_groups': '* Asset or Asset group at least one required',
-            'system_users': '* required',
-        }
+
+    def clean_system_user(self):
+        return self.cleaned_data['system_user']

@@ -4,17 +4,44 @@
 from django.utils.translation import ugettext_lazy as _
 from rest_framework import serializers
 from common.utils import get_object_or_none
-from .models import AssetPermission
-from .hands import User
+from common.fields import StringIDField
+from .models import AssetPermission, NodePermission
 
 
-class AssetPermissionSerializer(serializers.ModelSerializer):
+class AssetPermissionCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
-        model = AssetPermission
+        model = NodePermission
+        fields = [
+            'node', 'user_group', 'system_user',
+            'is_active', 'date_expired'
+        ]
+
+
+class AssetPermissionListSerializer(serializers.ModelSerializer):
+    node = StringIDField(read_only=True)
+    user_group = StringIDField(read_only=True)
+    system_user = StringIDField(read_only=True)
+
+    class Meta:
+        model = NodePermission
         fields = '__all__'
 
 
-class UserAssetPermissionSerializer(AssetPermissionSerializer):
+class AssetPermissionUpdateUserSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = AssetPermission
+        fields = ['id', 'users']
+
+
+class AssetPermissionUpdateAssetSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = AssetPermission
+        fields = ['id', 'assets']
+
+
+class UserAssetPermissionCreateUpdateSerializer(AssetPermissionCreateUpdateSerializer):
     is_inherited = serializers.SerializerMethodField()
 
     @staticmethod
